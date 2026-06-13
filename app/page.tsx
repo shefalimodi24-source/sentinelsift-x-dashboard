@@ -8,6 +8,7 @@ import { InvestigationsPage } from '@/components/pages/investigations-page'
 import { ReportPage } from '@/components/pages/report-page'
 import { SettingsPage } from '@/components/pages/settings-page'
 import { ToolsPage } from '@/components/pages/tools-page'
+import { WorkflowPage } from '@/components/pages/workflow-page'
 import { Sidebar } from '@/components/sidebar'
 import { useState } from 'react'
 
@@ -15,6 +16,7 @@ type Section =
   | 'dashboard'
   | 'investigations'
   | 'findings'
+  | 'workflow'
   | 'tools'
   | 'benchmarking'
   | 'agents'
@@ -29,6 +31,8 @@ function PageContent({ section }: { section: Section }) {
       return <InvestigationsPage />
     case 'findings':
       return <FindingsPage />
+    case 'workflow':
+      return <WorkflowPage />
     case 'tools':
       return <ToolsPage />
     case 'benchmarking':
