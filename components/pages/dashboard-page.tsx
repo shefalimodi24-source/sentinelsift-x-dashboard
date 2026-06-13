@@ -1,5 +1,6 @@
 'use client'
-
+import { useEffect, useState } from "react"
+import { getInvestigationData } from "@/lib/api"
 import { AnimatedCounter } from '@/components/animated-counter'
 import { cn } from '@/lib/utils'
 import {
