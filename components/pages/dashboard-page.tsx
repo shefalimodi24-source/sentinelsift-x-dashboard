@@ -106,6 +106,14 @@ const agentStatus = [
   { name: 'Verifier Agent', status: 'running', findings: 12 },
 ]
 
+const [data, setData] = useState<any>(null)
+
+useEffect(() => {
+  getInvestigationData()
+    .then(setData)
+    .catch(console.error)
+}, [])
+
 export function DashboardPage() {
   return (
     <div className="space-y-5">
