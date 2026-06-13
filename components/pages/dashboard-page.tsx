@@ -57,7 +57,7 @@ const severityColors: Record<string, string> = {
 const metrics = [
   {
     label: 'Cases Analyzed',
-    value: 127,
+    value: 1,
     trend: '+18%',
     icon: Search,
     suffix: '',
@@ -67,7 +67,7 @@ const metrics = [
   },
   {
     label: 'Findings Detected',
-    value: 342,
+    value: {data?.findings?.length || 0},
     trend: '+23%',
     icon: AlertTriangle,
     suffix: '',
@@ -77,7 +77,7 @@ const metrics = [
   },
   {
     label: 'Tools Executed',
-    value: 89,
+    value: {data?.tools?.length || 0},
     trend: '+31%',
     icon: Zap,
     suffix: '',
@@ -87,7 +87,8 @@ const metrics = [
   },
   {
     label: 'Detection Rate',
-    value: 100,
+    value: {data? `${Math.round(data.benchmark.detection_rate * 100)}%`
+    : "0%"},
     trend: '+5%',
     icon: CheckCircle2,
     suffix: '%',
