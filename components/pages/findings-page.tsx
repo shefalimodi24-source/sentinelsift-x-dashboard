@@ -1,0 +1,318 @@
+'use client'
+
+import { cn } from '@/lib/utils'
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Database,
+  FileText,
+  Info,
+  Shield,
+} from 'lucide-react'
+import { useState } from 'react'
+
+const findings = [
+  {
+    id: 1,
+    title: 'PowerShell Execution Detected',
+    confidence: 98,
+    evidenceCount: 14,
+    agent: 'Log Agent',
+    severity: 'critical',
+    description:
+      'Obfuscated PowerShell command detected in Security.evtx (Event ID 4688). Command contained base64-encoded payload consistent with reverse shell activity.',
+    evidence: [
+      { source: 'Event Logs', artifact: 'Security.evtx', value: 'Event ID 4688 — process creation', status: 'Verified' },
+      { source: 'Prefetch', artifact: 'POWERSHELL.EXE-xxx.pf', value: 'Execution timestamp 09:14:03', status: 'Verified' },
+    ],
+  },
+  {
+    id: 2,
+    title: 'Persistence Mechanism Detected',
+    confidence: 94,
+    evidenceCount: 8,
+    agent: 'Windows Artifact Agent',
+    severity: 'critical',
+    description:
+      'Registry Run key modification detected in SYSTEM hive. Malicious executable registered at HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run.',
+    evidence: [
+      { source: 'Registry', artifact: 'SYSTEM Hive', value: 'Run key: svchost32.exe', status: 'Verified' },
+      { source: 'Amcache', artifact: 'Amcache.hve', value: 'svchost32.exe first execution', status: 'Verified' },
+    ],
+  },
+  {
+    id: 3,
+    title: 'Event Log Analysis Completed',
+    confidence: 100,
+    evidenceCount: 67,
+    agent: 'Log Agent',
+    severity: 'high',
+    description:
+      'Full analysis of Security.evtx completed. 67 suspicious events identified across 4 MITRE ATT&CK techniques.',
+    evidence: [
+      { source: 'Event Logs', artifact: 'Security.evtx', value: '67 events matched IOC rules', status: 'Verified' },
+    ],
+  },
+  {
+    id: 4,
+    title: 'Amcache Analysis Completed',
+    confidence: 100,
+    evidenceCount: 23,
+    agent: 'Windows Artifact Agent',
+    severity: 'high',
+    description:
+      'Amcache.hve parsed successfully. 23 suspicious executable entries identified with anomalous installation paths.',
+    evidence: [
+      { source: 'Amcache', artifact: 'Amcache.hve', value: '23 suspicious entries', status: 'Verified' },
+    ],
+  },
+  {
+    id: 5,
+    title: 'Protocol SIFT Investigation Plan Generated',
+    confidence: 100,
+    evidenceCount: 5,
+    agent: 'Protocol SIFT Agent',
+    severity: 'medium',
+    description:
+      'SIFT methodology applied. Investigation plan generated with 5 prioritized artifact analysis tracks.',
+    evidence: [
+      { source: 'Internal', artifact: 'Investigation Plan', value: 'SIFT analysis tracks defined', status: 'Verified' },
+    ],
+  },
+  {
+    id: 6,
+    title: 'Suspicious Lateral Movement Detected',
+    confidence: 87,
+    evidenceCount: 11,
+    agent: 'Correlation Agent',
+    severity: 'high',
+    description:
+      'Evidence of lateral movement via SMB and WMI. Correlated events across event log and memory artifacts.',
+    evidence: [
+      { source: 'Event Logs', artifact: 'Security.evtx', value: 'Event ID 4624 — logon type 3', status: 'Verified' },
+      { source: 'Memory', artifact: 'Memory Dump', value: 'WMI process creation evidence', status: 'Pending' },
+    ],
+  },
+]
+
+const severityConfig: Record<string, { badge: string; icon: React.FC<{ className?: string }>; dot: string }> = {
+  critical: {
+    badge: 'text-red-400 bg-red-400/10 border-red-400/30',
+    icon: AlertTriangle,
+    dot: 'bg-red-400',
+  },
+  high: {
+    badge: 'text-orange-400 bg-orange-400/10 border-orange-400/30',
+    icon: AlertTriangle,
+    dot: 'bg-orange-400',
+  },
+  medium: {
+    badge: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30',
+    icon: Info,
+    dot: 'bg-yellow-400',
+  },
+  low: {
+    badge: 'text-green-400 bg-green-400/10 border-green-400/30',
+    icon: CheckCircle2,
+    dot: 'bg-green-400',
+  },
+}
+
+const evidenceItems = [
+  {
+    source: 'Event Logs',
+    artifact: 'Security.evtx',
+    value: 'Event ID 4688 — Process Creation',
+    timestamp: '09:14:03',
+    status: 'Verified',
+  },
+  {
+    source: 'Registry',
+    artifact: 'SYSTEM Hive',
+    value: 'Run key persistence: svchost32.exe',
+    timestamp: '09:15:44',
+    status: 'Verified',
+  },
+  {
+    source: 'Amcache',
+    artifact: 'Amcache.hve',
+    value: 'First execution of svchost32.exe',
+    timestamp: '09:16:01',
+    status: 'Verified',
+  },
+  {
+    source: 'Prefetch',
+    artifact: 'POWERSHELL.EXE-xxx.pf',
+    value: 'Execution: 09:14:03 UTC',
+    timestamp: '09:16:08',
+    status: 'Verified',
+  },
+  {
+    source: 'Memory',
+    artifact: 'Memory Dump',
+    value: 'Injected shellcode in lsass.exe',
+    timestamp: '09:16:55',
+    status: 'Processing',
+  },
+  {
+    source: 'Event Logs',
+    artifact: 'Security.evtx',
+    value: 'Event ID 4624 — Remote Logon',
+    timestamp: '09:14:47',
+    status: 'Verified',
+  },
+]
+
+export function FindingsPage() {
+  const [expanded, setExpanded] = useState<number | null>(0)
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Findings</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {findings.length} findings detected across all agents
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {['critical', 'high', 'medium', 'low'].map((s) => (
+            <span key={s} className={cn('text-[10px] font-mono px-2 py-1 rounded border uppercase', severityConfig[s]?.badge)}>
+              {s}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-5 gap-4 h-[calc(100vh-210px)]">
+        {/* Findings List */}
+        <div className="col-span-3 space-y-2 overflow-y-auto pr-1">
+          {findings.map((finding, idx) => {
+            const cfg = severityConfig[finding.severity]
+            const SevIcon = cfg.icon
+            const isExpanded = expanded === idx
+            return (
+              <div
+                key={finding.id}
+                className={cn(
+                  'glass rounded-xl border transition-all duration-200',
+                  isExpanded ? 'border-primary/30' : 'border-panel-border'
+                )}
+              >
+                <button
+                  className="w-full text-left px-4 py-3"
+                  onClick={() => setExpanded(isExpanded ? null : idx)}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <div className={cn('p-1.5 rounded mt-0.5', cfg.badge)}>
+                        <SevIcon className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{finding.title}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Source: {finding.agent} · {finding.evidenceCount} evidence items
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={cn('text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase', cfg.badge)}>
+                        {finding.severity}
+                      </span>
+                      {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                    </div>
+                  </div>
+
+                  {/* Confidence bar */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[10px] text-muted-foreground font-mono w-20">Confidence</span>
+                    <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={cn('h-full rounded-full transition-all', {
+                          'bg-red-400': finding.severity === 'critical',
+                          'bg-orange-400': finding.severity === 'high',
+                          'bg-yellow-400': finding.severity === 'medium',
+                          'bg-green-400': finding.severity === 'low',
+                        })}
+                        style={{ width: `${finding.confidence}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-foreground w-8 text-right">
+                      {finding.confidence}%
+                    </span>
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <div className="px-4 pb-3 border-t border-border mt-0">
+                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{finding.description}</p>
+                    {finding.evidence.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Evidence</p>
+                        {finding.evidence.map((ev, i) => (
+                          <div key={i} className="flex items-center gap-2 text-[11px] bg-muted/30 rounded px-2 py-1">
+                            <Database className="w-3 h-3 text-primary shrink-0" />
+                            <span className="text-primary font-mono">{ev.source}</span>
+                            <span className="text-muted-foreground">·</span>
+                            <span className="text-foreground">{ev.value}</span>
+                            <span className={cn('ml-auto text-[9px] font-mono px-1 py-0.5 rounded border', ev.status === 'Verified' ? 'text-green-400 border-green-400/30' : 'text-yellow-400 border-yellow-400/30')}>
+                              {ev.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Evidence Explorer */}
+        <div className="col-span-2 glass rounded-xl border border-panel-border flex flex-col overflow-hidden">
+          <div className="px-4 py-3 border-b border-border">
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Shield className="w-4 h-4 text-primary" />
+              Evidence Explorer
+            </h2>
+          </div>
+          <div className="flex-1 overflow-y-auto divide-y divide-border">
+            {evidenceItems.map((ev, idx) => (
+              <div key={idx} className="px-3 py-2.5 hover:bg-accent/20 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2">
+                    <FileText className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-foreground leading-tight">{ev.value}</p>
+                      <p className="text-[10px] text-primary font-mono mt-0.5">{ev.artifact}</p>
+                      <p className="text-[10px] text-muted-foreground">{ev.source} · {ev.timestamp}</p>
+                    </div>
+                  </div>
+                  <span
+                    className={cn(
+                      'text-[9px] font-mono px-1 py-0.5 rounded border shrink-0',
+                      ev.status === 'Verified'
+                        ? 'text-green-400 bg-green-400/10 border-green-400/25'
+                        : 'text-yellow-400 bg-yellow-400/10 border-yellow-400/25'
+                    )}
+                  >
+                    {ev.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="px-4 py-2.5 border-t border-border">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Total Evidence Items</span>
+              <span className="font-mono font-bold text-primary">1,284</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
