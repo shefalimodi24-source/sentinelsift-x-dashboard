@@ -372,28 +372,30 @@ function VerifierBlock() {
 
 function ToolSelectionSection() {
   return (
-    <div>
+    <div className="flex flex-col h-full">
       <h3 className="text-xs font-semibold text-white tracking-wide uppercase mb-3 flex items-center gap-2">
         <Wrench className="w-4 h-4 text-zinc-400" />
         Recommended DFIR Tools
       </h3>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 flex-1">
         {TOOL_CARDS.map((t) => (
-          <div key={t.tool} className="rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-3 hover:border-green-500/30 transition-all group">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-1 rounded bg-zinc-800">
+          <div key={t.tool} className="rounded-xl border border-zinc-800/60 bg-zinc-900/40 p-3 hover:border-green-500/30 transition-all group flex flex-col">
+            <div className="flex items-start gap-2 mb-2">
+              <div className="p-1 rounded bg-zinc-800 shrink-0 mt-0.5">
                 <Terminal className="w-3 h-3 text-zinc-400 group-hover:text-green-400 transition-colors" />
               </div>
-              <span className="text-xs font-bold font-mono text-white">{t.tool}</span>
+              <span className="text-xs font-bold font-mono text-white break-all leading-snug">{t.tool}</span>
             </div>
-            <p className="text-[10px] text-zinc-500 mb-2">Recommended by {t.agent}</p>
-            <div className="flex items-center justify-between">
+            <p className="text-[10px] text-zinc-500 mb-3 leading-relaxed flex-1">Recommended by {t.agent}</p>
+            <div className="flex items-center justify-between mt-auto">
               <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-green-500/30 bg-green-400/10 text-green-400 uppercase tracking-wider">
                 {t.status}
               </span>
-              <span className="text-xs font-bold font-mono text-green-400">{t.evidence}</span>
+              <div className="text-right">
+                <span className="text-sm font-bold font-mono text-green-400">{t.evidence}</span>
+                <p className="text-[9px] text-zinc-600">evidence records</p>
+              </div>
             </div>
-            <p className="text-[9px] text-zinc-600 mt-1 text-right">evidence records</p>
           </div>
         ))}
       </div>
