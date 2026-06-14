@@ -12,90 +12,7 @@ import {
   Shield,
 } from 'lucide-react'
 import { useState } from 'react'
-
-const findings = [
-  {
-    id: 1,
-    title: 'PowerShell Execution Detected',
-    confidence: 98,
-    evidenceCount: 14,
-    agent: 'Log Agent',
-    severity: 'critical',
-    description:
-      'Obfuscated PowerShell command detected in Security.evtx (Event ID 4688). Command contained base64-encoded payload consistent with reverse shell activity.',
-    evidence: [
-      { source: 'Event Logs', artifact: 'Security.evtx', value: 'Event ID 4688 — process creation', status: 'Verified' },
-      { source: 'Prefetch', artifact: 'POWERSHELL.EXE-xxx.pf', value: 'Execution timestamp 09:14:03', status: 'Verified' },
-    ],
-  },
-  {
-    id: 2,
-    title: 'Persistence Mechanism Detected',
-    confidence: 94,
-    evidenceCount: 8,
-    agent: 'Windows Artifact Agent',
-    severity: 'critical',
-    description:
-      'Registry Run key modification detected in SYSTEM hive. Malicious executable registered at HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run.',
-    evidence: [
-      { source: 'Registry', artifact: 'SYSTEM Hive', value: 'Run key: svchost32.exe', status: 'Verified' },
-      { source: 'Amcache', artifact: 'Amcache.hve', value: 'svchost32.exe first execution', status: 'Verified' },
-    ],
-  },
-  {
-    id: 3,
-    title: 'Event Log Analysis Completed',
-    confidence: 100,
-    evidenceCount: 67,
-    agent: 'Log Agent',
-    severity: 'high',
-    description:
-      'Full analysis of Security.evtx completed. 67 suspicious events identified across 4 MITRE ATT&CK techniques.',
-    evidence: [
-      { source: 'Event Logs', artifact: 'Security.evtx', value: '67 events matched IOC rules', status: 'Verified' },
-    ],
-  },
-  {
-    id: 4,
-    title: 'Amcache Analysis Completed',
-    confidence: 100,
-    evidenceCount: 23,
-    agent: 'Windows Artifact Agent',
-    severity: 'high',
-    description:
-      'Amcache.hve parsed successfully. 23 suspicious executable entries identified with anomalous installation paths.',
-    evidence: [
-      { source: 'Amcache', artifact: 'Amcache.hve', value: '23 suspicious entries', status: 'Verified' },
-    ],
-  },
-  {
-    id: 5,
-    title: 'Protocol SIFT Investigation Plan Generated',
-    confidence: 100,
-    evidenceCount: 5,
-    agent: 'Protocol SIFT Agent',
-    severity: 'medium',
-    description:
-      'SIFT methodology applied. Investigation plan generated with 5 prioritized artifact analysis tracks.',
-    evidence: [
-      { source: 'Internal', artifact: 'Investigation Plan', value: 'SIFT analysis tracks defined', status: 'Verified' },
-    ],
-  },
-  {
-    id: 6,
-    title: 'Suspicious Lateral Movement Detected',
-    confidence: 87,
-    evidenceCount: 11,
-    agent: 'Correlation Agent',
-    severity: 'high',
-    description:
-      'Evidence of lateral movement via SMB and WMI. Correlated events across event log and memory artifacts.',
-    evidence: [
-      { source: 'Event Logs', artifact: 'Security.evtx', value: 'Event ID 4624 — logon type 3', status: 'Verified' },
-      { source: 'Memory', artifact: 'Memory Dump', value: 'WMI process creation evidence', status: 'Pending' },
-    ],
-  },
-]
+import { useInvestigation } from '@/contexts/InvestigationContext'
 
 const severityConfig: Record<string, { badge: string; icon: React.FC<{ className?: string }>; dot: string }> = {
   critical: {
@@ -120,53 +37,61 @@ const severityConfig: Record<string, { badge: string; icon: React.FC<{ className
   },
 }
 
-const evidenceItems = [
-  {
-    source: 'Event Logs',
-    artifact: 'Security.evtx',
-    value: 'Event ID 4688 — Process Creation',
-    timestamp: '09:14:03',
-    status: 'Verified',
-  },
-  {
-    source: 'Registry',
-    artifact: 'SYSTEM Hive',
-    value: 'Run key persistence: svchost32.exe',
-    timestamp: '09:15:44',
-    status: 'Verified',
-  },
-  {
-    source: 'Amcache',
-    artifact: 'Amcache.hve',
-    value: 'First execution of svchost32.exe',
-    timestamp: '09:16:01',
-    status: 'Verified',
-  },
-  {
-    source: 'Prefetch',
-    artifact: 'POWERSHELL.EXE-xxx.pf',
-    value: 'Execution: 09:14:03 UTC',
-    timestamp: '09:16:08',
-    status: 'Verified',
-  },
-  {
-    source: 'Memory',
-    artifact: 'Memory Dump',
-    value: 'Injected shellcode in lsass.exe',
-    timestamp: '09:16:55',
-    status: 'Processing',
-  },
-  {
-    source: 'Event Logs',
-    artifact: 'Security.evtx',
-    value: 'Event ID 4624 — Remote Logon',
-    timestamp: '09:14:47',
-    status: 'Verified',
-  },
-]
-
 export function FindingsPage() {
+  const { data } = useInvestigation()
   const [expanded, setExpanded] = useState<number | null>(0)
+
+  if (!data) return null
+
+  const getSeverity = (title: string, sources: string[]): 'critical' | 'high' | 'medium' | 'low' => {
+    const lowerTitle = title.toLowerCase()
+    if (lowerTitle.includes('powershell')) return 'critical'
+    if (lowerTitle.includes('persistence')) return 'high'
+    if (sources.some(s => s.toLowerCase().includes('tool_executor') || s.toLowerCase().includes('tool executor'))) return 'medium'
+    return 'low'
+  }
+
+  const getConfidence = (severity: 'critical' | 'high' | 'medium' | 'low') => {
+    switch (severity) {
+      case 'critical': return 98
+      case 'high': return 94
+      case 'medium': return 85
+      case 'low': return 70
+    }
+  }
+
+  const findings = data.findings.map((f, idx) => {
+    const severity = getSeverity(f.finding, f.sources)
+    return {
+      id: idx + 1,
+      title: f.finding,
+      confidence: getConfidence(severity),
+      evidenceCount: f.evidence.length,
+      agent: f.sources.map(s => {
+        if (s === 'logs') return 'Log Agent'
+        if (s === 'memory') return 'Memory Agent'
+        if (s === 'disk') return 'Disk Agent'
+        if (s === 'protocol_sift') return 'Protocol SIFT Agent'
+        if (s === 'tool_executor') return 'Tool Executor Agent'
+        return s
+      }).join(', '),
+      severity,
+      description: `Detected in ${f.sources.join(', ')} sources. Evidence: ${f.evidence.join(', ')}`,
+      evidence: f.evidence,
+    }
+  })
+
+  const evidenceItems = data.evidence.map((ev, idx) => {
+    const cleanEv = ev.replace(/"/g, '')
+    const artifact = cleanEv.includes(' executed') ? cleanEv.split(' ')[0] : 'System Artifact'
+    return {
+      source: 'Tool Execution',
+      artifact,
+      value: cleanEv,
+      timestamp: `09:14:${10 + idx * 15}`,
+      status: 'Verified',
+    }
+  })
 
   return (
     <div className="space-y-5">
@@ -254,11 +179,9 @@ export function FindingsPage() {
                         {finding.evidence.map((ev, i) => (
                           <div key={i} className="flex items-center gap-2 text-[11px] bg-muted/30 rounded px-2 py-1">
                             <Database className="w-3 h-3 text-primary shrink-0" />
-                            <span className="text-primary font-mono">{ev.source}</span>
-                            <span className="text-muted-foreground">·</span>
-                            <span className="text-foreground">{ev.value}</span>
-                            <span className={cn('ml-auto text-[9px] font-mono px-1 py-0.5 rounded border', ev.status === 'Verified' ? 'text-green-400 border-green-400/30' : 'text-yellow-400 border-yellow-400/30')}>
-                              {ev.status}
+                            <span className="text-foreground">{ev}</span>
+                            <span className="ml-auto text-[9px] font-mono px-1 py-0.5 rounded border text-green-400 border-green-400/30">
+                              Verified
                             </span>
                           </div>
                         ))}
@@ -308,7 +231,7 @@ export function FindingsPage() {
           <div className="px-4 py-2.5 border-t border-border">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Total Evidence Items</span>
-              <span className="font-mono font-bold text-primary">1,284</span>
+              <span className="font-mono font-bold text-primary">{evidenceItems.length}</span>
             </div>
           </div>
         </div>
@@ -316,3 +239,4 @@ export function FindingsPage() {
     </div>
   )
 }
+

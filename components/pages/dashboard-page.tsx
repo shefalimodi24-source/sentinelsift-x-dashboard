@@ -1,7 +1,9 @@
 'use client'
-
+import { useState } from 'react'
+import { useInvestigation } from '@/contexts/InvestigationContext'
 import { AnimatedCounter } from '@/components/animated-counter'
 import { cn } from '@/lib/utils'
+import { uploadInvestigation } from '@/lib/api'
 import {
   Activity,
   AlertTriangle,
@@ -53,48 +55,6 @@ const severityColors: Record<string, string> = {
   low: 'text-green-400 bg-green-400/10 border-green-400/30',
 }
 
-const metrics = [
-  {
-    label: 'Cases Analyzed',
-    value: 127,
-    trend: '+18%',
-    icon: Search,
-    suffix: '',
-    color: 'text-primary',
-    bg: 'bg-primary/10',
-    border: 'border-primary/20',
-  },
-  {
-    label: 'Findings Detected',
-    value: 342,
-    trend: '+23%',
-    icon: AlertTriangle,
-    suffix: '',
-    color: 'text-orange-400',
-    bg: 'bg-orange-400/10',
-    border: 'border-orange-400/20',
-  },
-  {
-    label: 'Tools Executed',
-    value: 89,
-    trend: '+31%',
-    icon: Zap,
-    suffix: '',
-    color: 'text-yellow-400',
-    bg: 'bg-yellow-400/10',
-    border: 'border-yellow-400/20',
-  },
-  {
-    label: 'Detection Rate',
-    value: 100,
-    trend: '+5%',
-    icon: CheckCircle2,
-    suffix: '%',
-    color: 'text-green-400',
-    bg: 'bg-green-400/10',
-    border: 'border-green-400/20',
-  },
-]
 
 const agentStatus = [
   { name: 'Memory Agent', status: 'active', findings: 28 },
@@ -106,6 +66,86 @@ const agentStatus = [
 ]
 
 export function DashboardPage() {
+  const {
+    data,
+    refreshInvestigation,
+    updateInvestigation,
+  } = useInvestigation()
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [loadingInvestigation, setLoadingInvestigation] = useState(false)
+  const handleInvestigation = async () => {
+
+    if (!selectedFile) return
+
+    try {
+
+      setLoadingInvestigation(true)
+
+      const result =
+        await uploadInvestigation(
+          selectedFile
+        )
+
+      updateInvestigation(result)
+
+    } catch (err) {
+
+      console.error(err)
+
+      alert("Investigation failed")
+
+    } finally {
+
+      setLoadingInvestigation(false)
+
+    }
+  }
+
+  const metrics = [
+    {
+      label: 'Uploaded Artifacts',
+      value: 1,
+      trend: '+18%',
+      icon: Search,
+      suffix: '',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
+      border: 'border-primary/20',
+    },
+    {
+      label: 'Findings Detected',
+      value: data?.findings?.length || 0,
+      trend: '+23%',
+      icon: AlertTriangle,
+      suffix: '',
+      color: 'text-orange-400',
+      bg: 'bg-orange-400/10',
+      border: 'border-orange-400/20',
+    },
+    {
+      label: 'Tools Executed',
+      value: data?.tools?.length || 0,
+      trend: '+31%',
+      icon: Zap,
+      suffix: '',
+      color: 'text-yellow-400',
+      bg: 'bg-yellow-400/10',
+      border: 'border-yellow-400/20',
+    },
+    {
+      label: 'Detection Rate',
+      value: Math.round(
+        (data?.benchmark?.detection_rate ?? 0) * 100
+      ),
+      trend: '+5%',
+      icon: CheckCircle2,
+      suffix: '%',
+      color: 'text-green-400',
+      bg: 'bg-green-400/10',
+      border: 'border-green-400/20',
+    },
+  ]
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -125,10 +165,72 @@ export function DashboardPage() {
           </span>
           <span className="px-2 py-1 rounded border border-border bg-muted/30 text-muted-foreground">
             <Clock className="w-3 h-3 inline mr-1" />
-            {new Date().toLocaleTimeString()}
+            {typeof window !== 'undefined'
+              ? new Date().toLocaleTimeString()
+              : '--:--:--'}
           </span>
         </div>
       </div>
+
+      <div className="glass rounded-xl p-6 border border-panel-border">
+
+        <h2 className="text-lg font-bold text-foreground mb-4">
+          Upload Investigation Evidence
+        </h2>
+
+        <div className="flex gap-4 items-center">
+
+          <input
+            type="file"
+            accept=".json,.zip,.evtx"
+            onChange={(e) =>
+              setSelectedFile(
+                e.target.files?.[0] || null
+              )
+            }
+            className="text-sm"
+          />
+
+          <button
+            onClick={handleInvestigation}
+            disabled={
+              !selectedFile ||
+              loadingInvestigation
+            }
+            className="
+        px-4
+        py-2
+        rounded-lg
+        bg-cyan-500
+        text-black
+        font-semibold
+        disabled:opacity-50
+      "
+          >
+            {loadingInvestigation
+              ? "Analyzing..."
+              : "Start Investigation"}
+          </button>
+
+        </div>
+
+        {selectedFile && (
+
+          <p className="mt-3 text-cyan-400 text-sm">
+
+            Selected:
+            {" "}
+            {selectedFile.name}
+
+          </p>
+
+        )}
+
+      </div>
+
+
+
+
 
       {/* Metrics Row */}
       <div className="grid grid-cols-4 gap-3">

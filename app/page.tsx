@@ -11,6 +11,7 @@ import { ToolsPage } from '@/components/pages/tools-page'
 import { WorkflowPage } from '@/components/pages/workflow-page'
 import { Sidebar } from '@/components/sidebar'
 import { useState } from 'react'
+import { InvestigationProvider, useInvestigation } from '@/contexts/InvestigationContext'
 
 type Section =
   | 'dashboard'
@@ -48,9 +49,40 @@ function PageContent({ section }: { section: Section }) {
   }
 }
 
-export default function App() {
+function AppContent() {
+  const { loading, error } = useInvestigation()
   const [section, setSection] = useState<Section>('dashboard')
   const [collapsed, setCollapsed] = useState(false)
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#0a0f1a] text-foreground font-mono text-sm">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-primary tracking-wider animate-pulse">Loading investigation...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#0a0f1a] text-foreground font-mono text-sm px-4 text-center">
+        <div className="max-w-md p-6 rounded-xl border border-red-500/30 bg-red-500/5 glow-border space-y-4 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+          <p className="text-red-400 font-semibold text-lg">Unable to connect to SentinelSIFT-X backend</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Please ensure the FastAPI server is running on <code className="text-red-300 font-bold">http://127.0.0.1:8000</code> and try refreshing the page.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 rounded-lg text-xs transition-colors"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background network-bg">
@@ -66,3 +98,12 @@ export default function App() {
     </div>
   )
 }
+
+export default function App() {
+  return (
+    <InvestigationProvider>
+      <AppContent />
+    </InvestigationProvider>
+  )
+}
+
