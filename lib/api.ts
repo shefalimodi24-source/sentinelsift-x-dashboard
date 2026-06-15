@@ -1,4 +1,6 @@
-NEXT_PUBLIC_API_URL = https://sentinelsift-x-production.up.railway.app
+const API_URL =
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://sentinelsift-x-production.up.railway.app"
 
 export interface Finding {
     finding: string
@@ -24,15 +26,16 @@ export async function getInvestigationData(): Promise<InvestigationData> {
     const response = await fetch(`${API_URL}/latest`)
 
     if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`)
+        throw new Error(`API error: ${response.status}`)
     }
 
     return response.json()
 }
 
-export async function uploadInvestigation(file: File) {
+export async function uploadInvestigation(
+    file: File
+): Promise<InvestigationData> {
     const formData = new FormData()
-
     formData.append("file", file)
 
     const response = await fetch(
@@ -44,7 +47,10 @@ export async function uploadInvestigation(file: File) {
     )
 
     if (!response.ok) {
-        throw new Error("Upload failed")
+        const text = await response.text()
+        throw new Error(
+            `Upload failed: ${response.status} ${text}`
+        )
     }
 
     return response.json()
