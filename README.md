@@ -15,6 +15,13 @@ The dashboard enables investigators to upload evidence, launch investigations, m
 * Benchmarking and performance analytics
 * Export reports in multiple formats
 
+## How to use it :
+1. Open the demo URL (https://sentinelsift-x-dashboard.vercel.app)
+2. Upload one of the provided sample case files from the dataset (e.g., case3.json).
+{The dataset can be accessed from https://github.com/shefalimodi24-source/SentinelSIFT-X , under data , where json files like case3.json , case2.json etc are present}
+3. Click "Start Investigation".
+4. Review the generated findings, investigation workflow, evidence explorer, and final report.
+
 ## Technology Stack
 
 * Next.js
